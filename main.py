@@ -7,10 +7,9 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from messages.messages import Form
-
+from database.database import *
 import aioschedule
 
-import sqlite3
 
 TOKEN = get_config().get("TOKEN")
 # bot's settings
@@ -25,34 +24,6 @@ button2 = KeyboardButton('/удалить')
 button3 = KeyboardButton('/список')
 button4 = KeyboardButton('/помощь')
 markup = ReplyKeyboardMarkup().row(button1, button2).add(button3, button4)
-
-
-# функция подключния к бд
-def ensure_connection(func):
-    def inner(*args, **kwargs):
-        global conn
-        with sqlite3.connect('users.db', check_same_thread=False) as conn:
-            kwargs['conn'] = conn
-            res = func(*args, **kwargs)
-        return res
-
-    return inner
-
-
-# создание бд
-@ensure_connection
-def init_db(conn, force: bool = False):
-    c = conn.cursor()
-    if force:
-        c.execute('DROP TABLE IF EXISTS users')
-
-    c.execute('''
-		CREATE TABLE IF NOT EXISTS users (
-			user_id     INTEGER NOT NULL,
-			freezer     TEXT,
-			remain INTEGER)
-	''')
-    conn.commit()
 
 
 # сообщение при старте
@@ -99,11 +70,12 @@ async def add_product(message: types.Message, state: FSMContext):
     await state.finish()
 
     try:
-        c = conn.cursor()
-        prod, rem = message.text.split(' ')
-        sql = f'INSERT INTO users (user_id, freezer, remain) VALUES ({message.from_user.id}, "{prod}", {rem})'
-        c.execute(sql)
-        conn.commit()
+        with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
+            c = conn.cursor()
+            prod, rem = message.text.split(' ')
+            sql = f'INSERT INTO users (user_id, freezer, remain) VALUES ({message.from_user.id}, "{prod}", {rem})'
+            c.execute(sql)
+            conn.commit()
         await message.reply(f"{message.text} добавлен в список!")
     except:
         await message.reply("Произошла ошибка!")
@@ -112,14 +84,15 @@ async def add_product(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=["удалить"], commands_prefix="!/")
 async def delete(message: types.Message):
 
-    c = conn.cursor()
-    prod = message.text
-    sql = f'SELECT freezer, remain FROM users WHERE user_id = {message.from_user.id}'
-    c.execute(sql)
-    string = ''
+    with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
+        c = conn.cursor()
+        prod = message.text
+        sql = f'SELECT freezer, remain FROM users WHERE user_id = {message.from_user.id}'
+        c.execute(sql)
+        string = ''
 
-    for name, key in c.fetchall():
-        string += '\n' + name
+        for name, key in c.fetchall():
+            string += '\n' + name
 
     await message.answer(f"Ваши продукты: " + string)
     await message.answer("введите продукт который надо удалить")
@@ -133,11 +106,12 @@ async def delete_product(message: types.Message, state: FSMContext):
     await state.finish()
 
     try:
-        c = conn.cursor()
-        prod = message.text
-        sql = f'DELETE FROM users WHERE user_id = {message.from_user.id} AND freezer = "{prod}"'
-        c.execute(sql)
-        conn.commit()
+        with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
+            c = conn.cursor()
+            prod = message.text
+            sql = f'DELETE FROM users WHERE user_id = {message.from_user.id} AND freezer = "{prod}"'
+            c.execute(sql)
+            conn.commit()
         await message.answer("Продукт успешно удалён!")
     except:
         await message.reply(f"Произошла ошибка! проверьте введенные данные и повторите попытку снова!")
@@ -146,14 +120,15 @@ async def delete_product(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=["список"], commands_prefix="!/")
 async def spis(message: types.Message):
 
-    c = conn.cursor()
-    prod = message.text
-    sql = f'SELECT freezer, remain FROM users WHERE user_id = {message.from_user.id}'
-    c.execute(sql)
-    string = ''
+    with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
+        c = conn.cursor()
+        prod = message.text
+        sql = f'SELECT freezer, remain FROM users WHERE user_id = {message.from_user.id}'
+        c.execute(sql)
+        string = ''
 
-    for name, key in c.fetchall():
-        string += name + ' ' + str(key) + '\n'
+        for name, key in c.fetchall():
+            string += name + ' ' + str(key) + '\n'
 
     if string == '':
         await message.reply('В вашем холодильнике ничего нет. Скорее сходите закупиться!')
