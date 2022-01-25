@@ -117,17 +117,24 @@ async def delete_product(message: types.Message, state: FSMContext):
         await message.reply(f"Произошла ошибка! проверьте введенные данные и повторите попытку снова!")
 
 
-async def send_list(user_id):
+def send_list(user_id):
     string = get_user_products(user_id)
     if string == '':
-        await bot.send_message(chat_id=user_id, text='В вашем холодильнике ничего нет. Скорее сходите закупиться!')
+        bot.send_message(chat_id=user_id, text='В вашем холодильнике ничего нет. Скорее сходите закупиться!')
     else:
-        await bot.send_message(chat_id=user_id, text='Список продуктов в холодильнике: \n' + string)
+        bot.send_message(chat_id=user_id, text='Список продуктов в холодильнике: \n' + string)
 
 
 @dp.message_handler(commands=["список"], commands_prefix="!/")
 async def spis(message: types.Message):
-    await send_list(message.from_user.id)
+    # send_list(message.from_user.id)
+
+    string = get_user_products(message.from_user.id)
+
+    if string == '':
+        await message.reply('В вашем холодильнике ничего нет. Скорее сходите закупиться!')
+    else:
+        await message.reply('Список продуктов в холодильнике: \n' + string)
 
 
 @dp.message_handler()
@@ -147,13 +154,13 @@ async def everyday_mess():
     update_remains()
 
     for i in chat_ids:
-        await send_list(i)
+        send_list(i)
 
     delete_products()
 
 
 async def scheduler():
-    aioschedule.every().day.at("23:31").do(everyday_mess)
+    aioschedule.every().day.at("23:43").do(everyday_mess)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
