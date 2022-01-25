@@ -154,13 +154,21 @@ async def everyday_mess():
     update_remains()
 
     for i in chat_ids:
-        send_list(i)
+
+        string = get_user_products(i)
+
+        if string == '':
+            await bot.send_message(chat_id=i, text='В вашем холодильнике ничего нет. Скорее сходите закупиться!')
+            # await message.reply('В вашем холодильнике ничего нет. Скорее сходите закупиться!')
+        else:
+            await bot.send_message(chat_id=i, text='Список продуктов в холодильнике: \n' + string)
+            # await message.reply('Список продуктов в холодильнике: \n' + string)
 
     delete_products()
 
 
 async def scheduler():
-    aioschedule.every().day.at("23:43").do(everyday_mess)
+    aioschedule.every().day.at("12:00").do(everyday_mess)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
