@@ -117,18 +117,19 @@ async def delete_product(message: types.Message, state: FSMContext):
         await message.reply(f"Произошла ошибка! проверьте введенные данные и повторите попытку снова!")
 
 
+def send_list(user_id):
+    string = get_user_products(user_id)
+    if string == '':
+        bot.send_message(chat_id=user_id, text='В вашем холодильнике ничего нет. Скорее сходите закупиться!')
+    else:
+        bot.send_message(chat_id=user_id, text='Список продуктов в холодильнике: \n' + string)
+
+
 @dp.message_handler(commands=["список"], commands_prefix="!/")
 async def spis(message: types.Message):
+    # send_list(message.from_user.id)
 
-    with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
-        c = conn.cursor()
-        prod = message.text
-        sql = f'SELECT freezer, remain FROM users WHERE user_id = {message.from_user.id}'
-        c.execute(sql)
-        string = ''
-
-        for name, key in c.fetchall():
-            string += name + ' ' + str(key) + '\n'
+    string = get_user_products(message.from_user.id)
 
     if string == '':
         await message.reply('В вашем холодильнике ничего нет. Скорее сходите закупиться!')
@@ -142,13 +143,32 @@ async def echo(message: types.Message):
                          "напишите /помощь если возникли проблемы")
 
 
-async def test():
+async def everyday_mess():
     # await bot.send_message(chat_id=, text='dd')
-    print(1)
+
+    # users_list = f"SELECT user_id FROM users"
+    # c.execute(users_list)
+    # await bot.send_message(chat_id=457657867, text='dd')
+
+    chat_ids = get_user_ids()
+    update_remains()
+
+    for i in chat_ids:
+
+        string = get_user_products(i)
+
+        if string == '':
+            await bot.send_message(chat_id=i, text='В вашем холодильнике ничего нет. Скорее сходите закупиться!')
+            # await message.reply('В вашем холодильнике ничего нет. Скорее сходите закупиться!')
+        else:
+            await bot.send_message(chat_id=i, text='Список продуктов в холодильнике: \n' + string)
+            # await message.reply('Список продуктов в холодильнике: \n' + string)
+
+    delete_products()
 
 
 async def scheduler():
-    aioschedule.every().day.at("22:03").do(test)
+    aioschedule.every().day.at("12:00").do(everyday_mess)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
