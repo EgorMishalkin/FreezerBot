@@ -72,7 +72,9 @@ async def add_product(message: types.Message, state: FSMContext):
     try:
         with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
             c = conn.cursor()
-            prod, rem = message.text.split(' ')
+            product = message.text.split(' ')
+            prod = ' '.join(product[0:-1]).lower()
+            rem = product[-1]
             sql = f'INSERT INTO users (user_id, freezer, remain) VALUES ({message.from_user.id}, "{prod}", {rem})'
             c.execute(sql)
             conn.commit()
@@ -86,7 +88,6 @@ async def delete(message: types.Message):
 
     with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
         c = conn.cursor()
-        prod = message.text
         sql = f'SELECT freezer, remain FROM users WHERE user_id = {message.from_user.id}'
         c.execute(sql)
         string = ''
@@ -108,21 +109,13 @@ async def delete_product(message: types.Message, state: FSMContext):
     try:
         with sqlite3.connect(str(db_path), check_same_thread=False) as conn:
             c = conn.cursor()
-            prod = message.text
+            prod = message.text.lower()
             sql = f'DELETE FROM users WHERE user_id = {message.from_user.id} AND freezer = "{prod}"'
             c.execute(sql)
             conn.commit()
         await message.answer("Продукт успешно удалён!")
     except:
-        await message.reply(f"Произошла ошибка! проверьте введенные данные и повторите попытку снова!")
-
-
-def send_list(user_id):
-    string = get_user_products(user_id)
-    if string == '':
-        bot.send_message(chat_id=user_id, text='В вашем холодильнике ничего нет. Скорее сходите закупиться!')
-    else:
-        bot.send_message(chat_id=user_id, text='Список продуктов в холодильнике: \n' + string)
+        await message.reply(f"Некоректный ввод данных!")
 
 
 @dp.message_handler(commands=["список"], commands_prefix="!/")
@@ -146,15 +139,12 @@ async def echo(message: types.Message):
 async def everyday_mess():
     # await bot.send_message(chat_id=, text='dd')
 
-    # users_list = f"SELECT user_id FROM users"
-    # c.execute(users_list)
-    # await bot.send_message(chat_id=457657867, text='dd')
-
     chat_ids = get_user_ids()
     update_remains()
 
-    for i in chat_ids:
+    for i in set(chat_ids):
 
+        await bot.send_message(chat_id=i, text='Ежедневное обновление')
         string = get_user_products(i)
 
         if string == '':
