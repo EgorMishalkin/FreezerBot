@@ -30,7 +30,10 @@ def get_user_products(user_id):
         c.execute(sql)
 
         for name, key in c.fetchall():
-            string += name + ' ' + str(key) + '\n'
+            if key == 0:
+                string += 'продукт ' + name + ' испортился!' + '\n'
+            else:
+                string += name + ' ' + str(key) + '\n'
 
     return string
 
